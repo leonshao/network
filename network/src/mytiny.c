@@ -6,7 +6,6 @@
  */
 
 #include "socketutil.h"
-#include <stdlib.h>		// atoi
 #include <unistd.h>		// socklen_t, close()
 
 int main(int argc, char** argv) {
@@ -33,7 +32,7 @@ int main(int argc, char** argv) {
 		clientfd = accept(listenfd, (SA *)&clientaddr, (socklen_t *)&clientaddrlen);
 		if (clientfd > 0) {
 			// process request
-			printf("Get connection\n");
+			printf("Get connection from %s:%d\n", inet_ntoa(clientaddr.sin_addr), ntohs(clientaddr.sin_port));
 		}
 		close(listenfd);
 	}
