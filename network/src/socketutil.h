@@ -10,15 +10,9 @@
 
 #include <sys/socket.h>		// socket(), bind(), listen(), accept(), setsockopt()
 #include <netinet/in.h>		// sockaddr_in, htonl(), ntohs(), INADDR_ANY
-#include <stdio.h>			// printf(), snprintf()
+#include <stdio.h>			// printf()
 #include <stdlib.h>			// atoi
 #include <arpa/inet.h>		// inet_aton(), inet_ntoa()
-#include <unistd.h>			// socklen_t, close(), read()
-#include <string.h>			// strlen()
-#include <fcntl.h>			// fcntl(), F_GETFL, F_SETFL, O_NONBLOCK
-
-
-#define BUF_LEN 1024
 
 typedef struct sockaddr SA;
 
