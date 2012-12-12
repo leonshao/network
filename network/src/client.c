@@ -7,6 +7,7 @@
 
 #include "socketutil.h"
 
+
 void send_req(int fd) {
 	char buf[BUF_LEN];
 	snprintf((char *)&buf, sizeof(buf), "Hi.");

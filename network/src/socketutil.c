@@ -10,6 +10,7 @@
 #include "socketutil.h"
 
 
+
 int open_clientfd(char *hostname, int port) {
 	int clientfd;
 	struct hostent *hostp;
