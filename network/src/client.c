@@ -8,20 +8,25 @@
 #include "socketutil.h"
 
 
-void send_req(int fd) {
+void send_and_recv(int fd) {
 	char buf[BUF_LEN];
-	snprintf((char *)&buf, sizeof(buf), "Hi.");
-	write(fd, (char *)&buf, strlen((char *)&buf) + 1);
+	printf("please input data to send:\n");
+
+	// fgets is terminated until EOF(Ctrl-D)
+	while(fgets((char *)&buf, sizeof(buf), stdin) != NULL) {
+		// send input data to server via fd
+		if (write(fd, (char *)&buf, strlen((char *)&buf) + 1) > 0) {
+			read(fd, (char *)&buf, sizeof(buf));
+			printf("client receive data: %s\n", (char *)&buf);
+
+		}
+		else {
+			perror("write fail: ");
+			return;
+		}
+	}
 }
 
-void process_resp(int fd) {
-	int recvbytes;
-	char buf[BUF_LEN];
-
-	read(fd, (char *)&buf, sizeof(buf));
-	printf("client receive data: %s\n", (char *)&buf);
-
-}
 
 int main(int argc, char** argv) {
 	int clientfd, port;
@@ -38,8 +43,7 @@ int main(int argc, char** argv) {
 		return EXIT_FAILURE;
 	}
 
-	send_req(clientfd);
-	process_resp(clientfd);
+	send_and_recv(clientfd);
 
 	close(clientfd);
 

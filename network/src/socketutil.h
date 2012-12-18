@@ -10,8 +10,8 @@
 
 #include <sys/socket.h>		// socket(), bind(), listen(), accept(), setsockopt()
 #include <netinet/in.h>		// sockaddr_in, htonl(), ntohs(), INADDR_ANY
-#include <stdio.h>			// printf(), snprintf()
-#include <stdlib.h>			// atoi
+#include <stdio.h>			// printf(), snprintf(), fgets(), stdin
+#include <stdlib.h>			// atoi()
 #include <arpa/inet.h>		// inet_aton(), inet_ntoa()
 #include <unistd.h>			// socklen_t, close(), read()
 #include <string.h>			// strlen()

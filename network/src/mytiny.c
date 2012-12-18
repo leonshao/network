@@ -13,6 +13,8 @@ void process_req(int fd) {
 	int readbytes, flags;
 	char buf[BUF_LEN];
 
+	bzero((char *)&buf, sizeof(buf));
+
 	// set fd to nonblock, otherwise it blocks on read()
 	flags = fcntl(fd, F_GETFL, 0);
 	if (flags < 0) {
@@ -25,9 +27,6 @@ void process_req(int fd) {
 			&& errno == EAGAIN);
 	printf("server receive data: %s\t readbytes: %d\n", (char *)&buf, readbytes);
 
-	bzero((char *)&buf, sizeof(buf));
-
-	snprintf((char *)&buf, sizeof(buf), "Hello world.");
 	write(fd, (char *)&buf, strlen((char *)&buf) + 1);
 
 }
@@ -61,6 +60,7 @@ int main(int argc, char** argv) {
 		}
 
 		// do not mistake to listenfd!!!
+		printf("closing fd: %d\n", connfd);
 		close(connfd);
 	}
 
