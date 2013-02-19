@@ -6,8 +6,9 @@
  */
 
 #include "socketutil.h"
+#include "io/ioutil.h"
 #include <errno.h>			// errno, EAGAIN
-
+#include <netdb.h>			// gethostbyaddr
 
 void process_req(int fd) {
 	int readbytes, flags;
@@ -31,9 +32,24 @@ void process_req(int fd) {
 
 }
 
+void echo(int connfd) {
+	size_t n;
+	char buf[BUF_LEN];
+	io_t io_buf;
+
+	io_readinitb(&io_buf, connfd);
+	while((n = io_readlineb(&io_buf, buf, BUF_LEN)) != 0){
+		printf("server receive %d bytes data: %s", n, buf);
+
+		io_writen(connfd, buf, n);
+	}
+}
+
+
 int main(int argc, char** argv) {
 	int listenfd, port, connfd, clientaddrlen;
 	struct sockaddr_in clientaddr;
+	struct hostent * hostp;
 
 	if (argc != 2) {
 		printf("Usage: %s port\n", argv[0]);
@@ -53,14 +69,16 @@ int main(int argc, char** argv) {
 	clientaddrlen = sizeof(clientaddr);
 	while(1){
 		connfd = accept(listenfd, (SA *)&clientaddr, (socklen_t *)&clientaddrlen);
-		if (connfd > 0) {
-			// process request
-			printf("Get connection from %s:%d\n", inet_ntoa(clientaddr.sin_addr), ntohs(clientaddr.sin_port));
-			process_req(connfd);
+		hostp = gethostbyaddr((const char *) &clientaddr.sin_addr.s_addr,
+				sizeof(clientaddr.sin_addr.s_addr), AF_INET);
+		if (hostp != NULL ) {
+			printf("Get connection from %s (%s:%d)\n", hostp->h_name,
+					inet_ntoa(clientaddr.sin_addr), ntohs(clientaddr.sin_port));
+			echo(connfd);
 		}
 
 		// do not mistake to listenfd!!!
-		printf("closing fd: %d\n", connfd);
+		// printf("closing fd: %d\n", connfd);
 		close(connfd);
 	}
 

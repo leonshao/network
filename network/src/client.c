@@ -6,19 +6,25 @@
  */
 
 #include "socketutil.h"
+#include "io/ioutil.h"
 
 
 void send_and_recv(int fd) {
-	char buf[BUF_LEN];
+	io_t io_buf;
+	char buf[BUF_LEN];	// store input and response data
+
+	io_readinitb(&io_buf, fd);
+
 	printf("please input data to send:\n");
 
 	// fgets is terminated until EOF(Ctrl-D)
-	while(fgets((char *)&buf, sizeof(buf), stdin) != NULL) {
+	while(fgets(buf, sizeof(buf), stdin) != NULL) {
 		// send input data to server via fd
-		if (write(fd, (char *)&buf, strlen((char *)&buf) + 1) > 0) {
-			read(fd, (char *)&buf, sizeof(buf));
-			printf("client receive data: %s\n", (char *)&buf);
-
+		if (io_writen(fd, buf, strlen(buf)) > 0) {
+			// read a line from response data in io_buf
+			io_readlineb(&io_buf, buf, BUF_LEN);
+			fputs(buf, stdout);
+			// printf("client receive data: %s\n", (char *)&buf);
 		}
 		else {
 			perror("write fail: ");
