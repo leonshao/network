@@ -1,25 +1,25 @@
 CC = gcc
 CFLAGS = -O2 -Wall -I .
 
-INCLUDE = -I../src
 VPATH = io
 
 SOURCES = socketutil.c \
           ioutil.c
 OBJECTS = $(SOURCES:.c=.o)
 
-all: mytiny client
+OUTPUT = mytiny \
+         client
 
-.SUFFIXES: .c .o
-.c.o:
-	$(CC) $(CFLAGS) $(INCLUDE) -c $(filter %.c, $^)
-	
-mytiny: mytiny.c $(OBJECTS)
-	$(CC) $(CFLAGS) -o mytiny $^
+all: $(OUTPUT)
 
-client: client.c $(OBJECTS)
-	$(CC) $(CFLAGS) -o client $^
+$(OBJECTS): %.o: %.c
+	$(CC) $(CFLAGS) -c $<
+#.SUFFIXES: .c .o
+#.c.o:
+#	$(CC) $(CFLAGS) -c $(filter %.c, $^)
 
+$(OUTPUT): $(OBJECTS)
+	$(CC) $(CFLAGS) -o $@ $@.c $^
 
 clean:
 	rm -f *.o mytiny client *~

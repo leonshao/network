@@ -10,7 +10,6 @@
 #include "socketutil.h"
 
 
-
 int open_clientfd(char *hostname, int port) {
 	int clientfd;
 	struct hostent *hostp;
@@ -90,4 +89,17 @@ int open_listenfd(int port) {
 	printf("server starts at %s:%d\n", inet_ntoa(serveraddr.sin_addr), port);
 
 	return listenfd;
+}
+
+
+struct hostent *check_client_addr(struct sockaddr_in *clientaddr){
+	struct hostent * hostp;
+	hostp = gethostbyaddr((const char *)&clientaddr->sin_addr.s_addr,
+			sizeof(clientaddr->sin_addr.s_addr), AF_INET);
+	if (hostp != NULL ) {
+		printf("Get connection from %s (%s:%d)\n", hostp->h_name,
+				inet_ntoa(clientaddr->sin_addr), ntohs(clientaddr->sin_port));
+		return hostp;
+	}
+	return NULL;
 }

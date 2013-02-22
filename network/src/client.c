@@ -13,7 +13,7 @@ void send_and_recv(int fd) {
 	io_t io_buf;
 	char buf[BUF_LEN];	// store input and response data
 
-	io_readinitb(&io_buf, fd);
+	io_initbuf(&io_buf, fd);
 
 	printf("please input data to send:\n");
 

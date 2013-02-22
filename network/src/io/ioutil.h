@@ -21,9 +21,10 @@ typedef struct {
 ssize_t io_readn(int fd, void *usrbuf, size_t n);
 ssize_t io_writen(int fd, void *usrbuf, size_t n);
 
-void io_readinitb(io_t *iop, int fd);
+/* buffered read, write */
+void io_initbuf(io_t *iop, int fd);
 ssize_t io_readlineb(io_t *rp, void *usrbuf, size_t maxlen);
 ssize_t io_readnb(io_t *rp, void *usrbuf, size_t n);
-
+void io_print_buf(io_t *rp);
 
 #endif /* IOUTIL_H_ */

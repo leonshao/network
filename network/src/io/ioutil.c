@@ -57,7 +57,7 @@ ssize_t io_writen(int fd, void *usrbuf, size_t n){
 
 
 /* init read buffer struct */
-void io_readinitb(io_t *iop, int fd) {
+void io_initbuf(io_t *iop, int fd) {
 	iop->io_fd		= fd;
 	iop->io_cnt 	= 0;
 	iop->io_bufptr	= iop->io_buf;
@@ -150,3 +150,7 @@ ssize_t io_readnb(io_t *rp, void *usrbuf, size_t n){
 	return (n - nleft);
 }
 
+
+void io_print_buf(io_t *rp) {
+	printf("%s", rp->io_buf);
+}

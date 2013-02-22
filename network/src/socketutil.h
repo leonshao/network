@@ -25,5 +25,6 @@ typedef struct sockaddr SA;
 
 int open_listenfd(int port);
 int open_clientfd(char *hostname, int port);
+struct hostent *check_client_addr(struct sockaddr_in *clientaddr);
 
 #endif /* SOCKETUTIL_H_ */
