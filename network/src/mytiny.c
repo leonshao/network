@@ -10,15 +10,20 @@
 #include <errno.h>			// errno, EAGAIN
 #include <netdb.h>			// gethostbyaddr()
 #include <stdio.h>			// sscanf()
-#include <string.h>			// strcasecmp()
+#include <string.h>			// strcasecmp(), strcpy(), strcat()
 #include <sys/mman.h>		// mmap(), PROT_READ, MAP_PRIVATE
 #include <sys/stat.h>		// stat()
+#include <unistd.h>			// fork(), STDOUT_FILENO, execve(), __environ
+#include <stdlib.h>			// setenv()
+#include <sys/wait.h>		// wait()
 
 void process_req(int connfd);
 void error_to_client(int connfd, char *cause, char * errnum, char *shortmsg, char *longmsg);
 void read_req_header(io_t *io_buf);
 void serve_static(int connfd, char *filename);
 void get_file_type(char *filename, char *filetype);
+int parse_uri(char *uri, char *filename, char *cgi_args);
+void serve_dynamic(int connfd, char *filename, char *cgi_args);
 
 
 void error_to_client(int connfd, char *cause, char * errnum, char *shortmsg, char *longmsg){
@@ -59,17 +64,69 @@ void serve_static(int connfd, char *filename) {
 }
 
 void get_file_type(char *filename, char *filetype) {
-	char * type;
-	if ((type = strstr(filename, "."))) {
-		sprintf(filetype, "text/%s", ++type);
+	if (strstr(filename, ".html"))
+		strcpy(filetype, "text/html");
+	else if (strstr(filename, ".jpg"))
+		strcpy(filetype, "image/jpeg");
+	else if (strstr(filename, ".gif"))
+		strcpy(filetype, "image/gif");
+	else
+		strcpy(filetype, "text/plain");
+}
+
+int parse_uri(char *uri, char *filename, char *cgi_args) {
+	char * ptr;
+
+	/* request for static content */
+	if (!strstr(uri, "cgi-bin")) {
+		strcpy(cgi_args, "");			// clear cgi_args
+		strcpy(filename, ".");
+		strcat(filename, uri);
+		if (uri[strlen(uri)-1] == '/')	// the last char in uri is '/', append file name
+			strcat(filename, "home.html");
+		return 1;
+	}
+	/* get "cgi-bin" in the uri string, request for dynamic content
+	 * /cgi-bin/adder?a=1&b=2 */
+	else {
+		ptr = index(uri, '?');
+		if (ptr) {
+			strcpy(cgi_args, ptr+1);
+			*ptr = '\0';
+		}
+		else
+			strcpy(cgi_args, "");
+		strcpy(filename, ".");
+		strcat(filename, uri);
+		return 0;
 	}
 }
 
+void serve_dynamic(int connfd, char *filename, char *cgi_args) {
+	char buf[BUF_LEN], *emptylist[] = { NULL };
+
+	/* send response header and create child process to handle dynamic content */
+	sprintf(buf, "HTTP/1.1 200 OK\r\n");
+	sprintf(buf, "%sServer: My Web Server\r\n", buf);
+	io_writen(connfd, buf, strlen(buf));
+
+	if (fork() == 0) {	/* child process */
+		/* pass the args to cgi(adder) via environment QUERY_STRING */
+		setenv("QUERY_STRING", cgi_args, 1);
+		dup2(connfd, STDOUT_FILENO);			/* redirect output to client */
+		execve(filename, emptylist, __environ);	/* execute the CGI program */
+	}
+	wait(NULL);
+}
+
+
 /* http request handler */
 void process_req(int connfd) {
+	int is_static;
 	io_t io_buf;
 	char buf[BUF_LEN];
 	char method[10], uri[BUF_LEN], version[10];
+	char filename[BUF_LEN], cgi_args[BUF_LEN];
 
 	io_initbuf(&io_buf, connfd);
 	io_readlineb(&io_buf, buf, BUF_LEN);
@@ -84,15 +141,22 @@ void process_req(int connfd) {
 	if (strcasecmp(method, "GET")) {
 		error_to_client(connfd, method, "501", "Not Implemented",
 				"Server does not implement this method");
+		return;
 	}
 
 	/* print request header */
 	read_req_header(&io_buf);
 
-	/* parse URI */
+	/* parse URI to get filename and args */
+	is_static = parse_uri(uri, filename, cgi_args);
 
 	/* serve for request*/
-	serve_static(connfd, "home.html");
+	if (is_static) {
+		serve_static(connfd, filename);
+	}
+	else {
+		serve_dynamic(connfd, filename, cgi_args);
+	}
 }
 
 void echo(int connfd) {
@@ -115,7 +179,7 @@ int main(int argc, char** argv) {
 
 	if (argc != 2) {
 		printf("Usage: %s port\n", argv[0]);
-		return EXIT_FAILURE;
+		return 1;
 	}
 
 	port = atoi(argv[1]);
@@ -133,5 +197,5 @@ int main(int argc, char** argv) {
 		// do not mistake to listenfd!!!
 		close(connfd);
 	}
-
+	return 0;
 }
