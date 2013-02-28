@@ -2,10 +2,12 @@ CC = gcc
 CFLAGS = -O2 -Wall -I .
 
 VPATH = io \
+        handler \
         cgi-bin
 
 SOURCES = socketutil.c \
-          ioutil.c
+          ioutil.c \
+          handler.c
 OBJECTS = $(SOURCES:.c=.o)
 
 OUTPUT = mytiny \
