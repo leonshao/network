@@ -9,6 +9,7 @@
 #include <errno.h>		// errno, EINTR
 #include <string.h>		// memcpy
 #include <unistd.h>		// read, write
+#include <fcntl.h>		// open()
 
 /* read n bytes (unbuffered) */
 ssize_t io_readn(int fd, void *usrbuf, size_t n) {
@@ -152,5 +153,18 @@ ssize_t io_readnb(io_t *rp, void *usrbuf, size_t n){
 
 
 void io_print_buf(io_t *rp) {
-	printf("%s", rp->io_buf);
+	int filefd;
+	printf("%s\n", rp->io_buf);
+
+	filefd = open("log.txt", O_RDWR|O_CREAT|O_APPEND, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
+	io_writen(filefd, rp->io_buf, strlen(rp->io_buf));
+	close(filefd);
+}
+
+
+void io_dump_buf(io_t *iop){
+	printf("io_fd: %d\n", iop->io_fd);
+	printf("io_cnt: %d\n", iop->io_cnt);
+	printf("io_bufptr: %s\n", iop->io_bufptr);
+	printf("io_buf: %s\n", iop->io_buf);
 }

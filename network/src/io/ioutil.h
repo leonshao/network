@@ -27,4 +27,6 @@ ssize_t io_readlineb(io_t *rp, void *usrbuf, size_t maxlen);
 ssize_t io_readnb(io_t *rp, void *usrbuf, size_t n);
 void io_print_buf(io_t *rp);
 
+void io_dump_buf(io_t *iop);
+
 #endif /* IOUTIL_H_ */

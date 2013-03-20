@@ -7,9 +7,20 @@
 #include <stdlib.h>		// getenv()
 #include <string.h>		// strchr()
 #include <stdio.h>		// sprintf(), fflush()
+#include <signal.h>		// signal()
 
 #define BUF_LEN 1024
 #define CONTENT_BUFSIZE 8192
+
+char * get_arg_value(char * arg) {
+	char * ptr = NULL;
+
+	if ((ptr = strchr(arg, '=')) != NULL) {
+		return ptr + 1;
+	}
+
+	return NULL;
+}
 
 int main(void) {
 	char *buf, *p;
@@ -22,8 +33,8 @@ int main(void) {
 		p = strchr(buf, '&');
 		*p = '\0';	// overwrite '&' with '\0', split to two strings
 
-		strcpy(arg1, buf);
-		strcpy(arg2, p+1);
+		strcpy(arg1, get_arg_value(buf));
+		strcpy(arg2, get_arg_value(p+1));
 		n1 = atoi(arg1);
 		n2 = atoi(arg2);
 	}
