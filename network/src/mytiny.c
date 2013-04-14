@@ -12,7 +12,6 @@
 #include <netdb.h>			// gethostbyaddr()
 #include <stdio.h>			// sscanf()
 #include <string.h>			// strcasecmp(), strcpy(), strcat()
-#include <sys/mman.h>		// mmap(), PROT_READ, MAP_PRIVATE
 #include <stdlib.h>			// setenv()
 #include <signal.h>			// signal(), SIG_ERR
 
@@ -23,7 +22,7 @@ void echo(int connfd) {
 
 	io_initbuf(&io_buf, connfd);
 	while((n = io_readlineb(&io_buf, buf, BUF_LEN)) != 0){
-		printf("server receive %d bytes data: %s", n, buf);
+		printf("server receive %d bytes data: %s", (int)n, buf);
 
 		io_writen(connfd, buf, n);
 	}

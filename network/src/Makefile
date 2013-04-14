@@ -1,7 +1,8 @@
 CC = gcc
 CFLAGS = -O2 -Wall -I .
 
-VPATH = io \
+VPATH = socket \
+		io \
         handler \
         cgi-bin
 
