@@ -12,7 +12,10 @@ SOURCES = socketutil.c \
 OBJECTS = $(SOURCES:.c=.o)
 
 OUTPUT = mytiny \
-         client
+         client \
+         tiny-multiprocess \
+         tiny-select \
+         test
 
 all: $(OUTPUT) cgi
 
@@ -29,7 +32,7 @@ cgi:
 	cd cgi-bin; make
 
 clean: cleancgi
-	rm -f *.o mytiny client *~
+	rm -f *.o mytiny client tiny-multiprocess tiny-select test *~
 
 cleancgi:
 	cd cgi-bin; make clean

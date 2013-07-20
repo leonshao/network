@@ -226,8 +226,6 @@ void process_req(int connfd) {
 	/* print request header */
 	read_req_header(&io_buf);
 
-	sleep(10);
-
 	/*
 	 * get http request line, split method, URI and version
 	 * GET / HTTP/1.1
