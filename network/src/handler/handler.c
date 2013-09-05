@@ -224,7 +224,7 @@ void process_req(int connfd) {
 	io_readlineb(&io_buf, buf, BUF_LEN);
 
 	/* print request header */
-	read_req_header(&io_buf);
+	//read_req_header(&io_buf);
 
 	/*
 	 * get http request line, split method, URI and version

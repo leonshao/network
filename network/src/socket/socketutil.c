@@ -18,7 +18,7 @@ int open_clientfd(char *hostname, int port) {
 
 	// 1. create client socket fd
 	if ((clientfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-		printf("socket fail!\n");
+		perror("socket fail");
 		return -1;
 	}
 
