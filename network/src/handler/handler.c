@@ -16,7 +16,6 @@
 #include <signal.h>		// signal()
 #include <errno.h>		// errno, ECHILD
 
-#define LINE_LEN 1024
 #define BUF_LEN 8192
 
 
@@ -208,13 +207,35 @@ void serve_header(int connfd, io_t *io_buf) {
 	io_writen(connfd, content, strlen(content));
 }
 
+int check_req(char * req_line, req_line_t * req_line_ptr) {
+	char * method_p 	= (char *)&req_line_ptr->method;
+	char * uri_p 		= (char *)&req_line_ptr->uri;
+	char * version_p 	= (char *)&req_line_ptr->version;
+	/*
+	 * get http request line, split method, URI and version
+	 * GET / HTTP/1.1
+	 */
+	sscanf(req_line, "%s %s %s", method_p, uri_p, version_p);
+
+	/* only support method GET/POST */
+	if (!strcasecmp(method_p, "POST")) {
+		/* method is POST */
+	}
+	else if (strcasecmp(method_p, "GET")) {
+		/* neither POST nor GET */
+		return -1;
+	}
+
+	return 0;
+}
+
 
 /* http request handler */
 void process_req(int connfd) {
 	int req_type;
 	io_t io_buf;
+	req_line_t req_line;
 	char buf[BUF_LEN];
-	char method[10], uri[BUF_LEN], version[10];
 	char filename[BUF_LEN], cgi_args[BUF_LEN];
 	struct stat file_stat;
 
@@ -226,26 +247,14 @@ void process_req(int connfd) {
 	/* print request header */
 	//read_req_header(&io_buf);
 
-	/*
-	 * get http request line, split method, URI and version
-	 * GET / HTTP/1.1
-	 */
-	sscanf(buf, "%s %s %s", method, uri, version);
-
-	/* only support method GET/POST */
-	if (!strcasecmp(method, "POST")) {
-		/* method is POST */
-
-	}
-	else if (strcasecmp(method, "GET")) {
-		/* neither POST nor GET */
-		error_to_client(connfd, method, "501", "Not Implemented",
+	if (check_req((char *)&buf, &req_line)) {
+		error_to_client(connfd, (char *)&(req_line.method), "501", "Not Implemented",
 				"Server does not implement this method");
 		return;
 	}
 
 	/* parse URI to get filename and args */
-	req_type = parse_uri(uri, &io_buf, filename, cgi_args);
+	req_type = parse_uri((char *)&req_line.uri, &io_buf, filename, cgi_args);
 
 	/* serve for request*/
 	switch(req_type) {

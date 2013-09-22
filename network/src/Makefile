@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -O2 -Wall -I .
+CFLAGS = -O2 -Wall -I.
 
 LIB = -lpthread
 
@@ -13,12 +13,7 @@ SOURCES = socketutil.c \
           handler.c
 OBJECTS = $(SOURCES:.c=.o)
 
-OUTPUT = mytiny \
-         client \
-         tiny-multiprocess \
-         tiny-select \
-         tiny-multithread \
-         tiny-prethreads \
+OUTPUT = proxy \
          test
 
 all: $(OUTPUT) cgi
@@ -36,7 +31,7 @@ cgi:
 	cd cgi-bin; make
 
 clean: cleancgi
-	rm -f *.o mytiny client tiny-multiprocess tiny-select tiny-multithread tiny-prethreads test *~
+	rm -f *.o proxy test *~
 
 cleancgi:
 	cd cgi-bin; make clean
