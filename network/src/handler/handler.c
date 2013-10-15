@@ -229,6 +229,10 @@ int check_req(char * req_line, req_line_t * req_line_ptr) {
 	return 0;
 }
 
+void print_req(req_line_t * req_ptr) {
+	printf("%s %s %s\n", req_ptr->method, req_ptr->uri, req_ptr->version);
+}
+
 
 /* http request handler */
 void process_req(int connfd) {

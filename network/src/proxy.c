@@ -7,33 +7,77 @@
 
 #include "socket/socketutil.h"
 #include "handler/handler.h"
+#include <sys/stat.h>
+#include <pthread.h>
+
+#define HOSTINFO_SIZE		32
+#define BLOCK_URL_SIZE		64
 
 typedef struct {
 	char hostname[LINE_LEN];
 	int port;
 } hostinfo_t;
 
-void verify_req(int connfd, char * req_line_p) {
-	int filefd;
+hostinfo_t hostinfo[HOSTINFO_SIZE];
+int hostinfo_num;
+int hostinfo_index;
+
+char block_url_info[BLOCK_URL_SIZE][LINE_LEN];
+int block_url_num;
+
+int verify_req(int connfd, char * req_line_p) {
+	io_t io_buf;			// to store all the req content
+	char header[BUF_LEN];	// to get the req line
 	req_line_t req_line;	// parsed method, uri and version
-	// char * uri_p = (char *)&req_line.uri;
+	char *block_url_info_p;
+	int i;
+
+	/* read header into buf */
+	io_initbuf(&io_buf, connfd);
+	io_readlineb(&io_buf, header, BUF_LEN);
+
+	// logging
+	logging(&io_buf);
 
 	// method not support
-	if (check_req(req_line_p, &req_line)) {
+	if (check_req((char *)&header, &req_line)) {
 		error_to_client(connfd, (char *)&req_line.method, "501", "Not Implemented",
 				"Server does not implement this method");
-		return;
+		return -1;
 	}
 
-	// uri is in block file
-	filefd = open("log.txt", O_RDWR, S_IRUSR);
+	// block the url or not
+	for (i=0; i<block_url_num; i++) {
+		block_url_info_p = (char *)&block_url_info[i];
+		if (strstr(block_url_info_p, req_line.uri) && (strlen(block_url_info_p) == strlen(req_line.uri))) {
+			printf("url:%s is blocked!\n", req_line.uri);
+			// response for the blocking
+			error_to_client(connfd, req_line.uri, "403", "Forbidden",
+					"Url is blocked");
+			return 1;
+		}
+	}
+
+
+	strcpy(req_line_p, (char *)&header);
+
+	return 0;
 }
 
 int parse_config(char *config, hostinfo_t *hostinfo) {
 	char buf[BUF_LEN];
-	char *p, *p_next;
+	char *p, *hostname_p;
 
 	strcpy(buf, config);
+
+	// skip space or tab at start position
+	p = (char *)&buf;
+	while (*p == ' ' || *p == '\t') {
+		*p++ = '\0';
+	}
+	hostname_p = p;
+
+	// skip space or tab between hostname and port
 	p = strchr(buf, ' ');
 	if (p == NULL) {
 		p = strchr(buf, '\t');
@@ -45,7 +89,7 @@ int parse_config(char *config, hostinfo_t *hostinfo) {
 			*p++ = '\0';
 		}
 
-		strcpy(hostinfo->hostname, buf);
+		strcpy(hostinfo->hostname, hostname_p);
 		hostinfo->port = atoi(p);
 		return 0;
 	}
@@ -58,44 +102,90 @@ void print_hostinfo(hostinfo_t *hostinfo) {
 	printf("%s\t%d\n", hostinfo->hostname, hostinfo->port);
 }
 
-void proxy_handler(int connfd) {
-	int clientfd, n, filefd;
-	io_t io_buf;			// to store all the req content
-	char line_buf[BUF_LEN];
+void *thread_start(void *vargp) {
+	int connfd = *((int *)vargp);
+	int clientfd, n;
 	char buf[8192];
 	char header[BUF_LEN];	// to get the req line
-	io_t io_file_buf;
-	hostinfo_t hostinfo;
+	hostinfo_t *hostinfo_p;
+	int result;
+
+	free(vargp);
 
 	// 1. check HTTP req, redirect or block
-	io_initbuf(&io_buf, connfd);
-	/* read header into buf */
-	io_readlineb(&io_buf, header, BUF_LEN);
+	result = verify_req(connfd, (char *)&header);
+	if (result) {
+		close(connfd);
+		return NULL;
+	}
 
-	// 2. redirect req to server
-	// get server info from config file
-	filefd = open("config.txt", O_RDWR, S_IRUSR);
-	io_initbuf(&io_file_buf, filefd);
-	io_readlineb(&io_file_buf, line_buf, BUF_LEN);
-	parse_config(line_buf, &hostinfo);
-	close(filefd);
-	// print_hostinfo(&hostinfo);
+	// 2. redirect req to server and send back response
+	hostinfo_p = &hostinfo[hostinfo_index++];
+	if (hostinfo_index == hostinfo_num)
+		hostinfo_index = 0;
 
-	clientfd = open_clientfd(hostinfo.hostname, hostinfo.port);
+	bzero((char *)&buf, 8192);
+	clientfd = open_clientfd(hostinfo_p->hostname, hostinfo_p->port);
 	n = write(clientfd, header, strlen(header));
 	while ((n = read(clientfd, &buf, 8192)) > 0) {
-		printf("%s\n", buf);
 		io_writen(connfd, buf, strlen(buf));
 	}
+
 	close(clientfd);
 	close(connfd);
+	return NULL;
+}
 
-	// 3. logging
+/* get server info from config file */
+int init_config() {
+	FILE * config_file;
+	char line[LINE_LEN];
+	int hostinfo_num = 0;
+	char * filename = "config.txt";
+	struct stat file_stat;
+
+	if (stat(filename, &file_stat)) {
+		// url block file not exists
+		return 0;
+	}
+	config_file = fopen(filename, "r+");
+	// printf("orig pos: %ld\n", ftell(config_file));
+
+	while (fgets(line, LINE_LEN, config_file)) {
+		parse_config(line, &hostinfo[hostinfo_num++]);
+	}
+	hostinfo_index = 0;
+
+	return hostinfo_num;
+}
+
+int init_block_urls() {
+	int block_url_num = 0;
+	char line[LINE_LEN];
+	FILE * block_urls_file;
+	char * chr_p;
+	char * filename = "block_url.txt";
+	struct stat file_stat;
+
+	if (stat(filename, &file_stat)) {
+		// url block file not exists
+		return 0;
+	}
+	block_urls_file = fopen(filename, "r+");
+	while (fgets(line, LINE_LEN, block_urls_file)) {
+		// remove the \n in the blocking url line
+		chr_p = strchr(line, '\n');
+		if (chr_p)
+			*chr_p = '\0';
+		strcpy((char *)&block_url_info[block_url_num++], line);
+	}
+	return block_url_num;
 }
 
 int main(int argc, char** argv) {
-	int listenfd, port, connfd, clientaddrlen;
+	int listenfd, port, *connfdp, clientaddrlen;
 	struct sockaddr_in clientaddr;
+	pthread_t tid;
 
 	if (argc != 2) {
 		printf("Usage: %s port\n", argv[0]);
@@ -107,9 +197,18 @@ int main(int argc, char** argv) {
 	listenfd = open_listenfd(port);
 	clientaddrlen = sizeof(clientaddr);
 
-	while (1) {
-		connfd = accept(listenfd, (SA *)&clientaddr, (socklen_t *)&clientaddrlen);
-
-		proxy_handler(connfd);
+	// init config and blocking urls
+	hostinfo_num = init_config();
+	if (hostinfo_num == 0) {
+		printf("no host info file!\n");
+		return 1;
 	}
+	block_url_num = init_block_urls();
+
+	while (1) {
+		connfdp = malloc(sizeof(int));
+		*connfdp = accept(listenfd, (SA *)&clientaddr, (socklen_t *)&clientaddrlen);
+		pthread_create(&tid, NULL, thread_start, (void *)connfdp);
+	}
+	return 0;
 }

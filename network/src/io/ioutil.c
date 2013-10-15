@@ -152,13 +152,16 @@ ssize_t io_readnb(io_t *rp, void *usrbuf, size_t n){
 }
 
 
-void io_print_buf(io_t *rp) {
+void logging(io_t *rp) {
 	int filefd;
-	printf("%s\n", rp->io_buf);
-
 	filefd = open("log.txt", O_RDWR|O_CREAT|O_APPEND, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
 	io_writen(filefd, rp->io_buf, strlen(rp->io_buf));
 	close(filefd);
+}
+
+void io_print_buf(io_t *rp) {
+	printf("%s\n", rp->io_buf);
+	logging(rp);
 }
 
 

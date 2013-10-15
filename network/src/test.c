@@ -9,7 +9,7 @@
 #include <pthread.h>
 
 // if no ended with \r\n, no response from server
-char * header = "GET / HTTP/1.1\r\n";
+char * header = "GET /home.html HTTP/1.1\r\n";
 char *hostname;
 int port;
 
@@ -34,7 +34,7 @@ void *thread_start(void *vargp) {
 }
 
 int main(int argc, char** argv) {
-	int req, req_num, i;
+	int req, req_num;
 	pthread_t *tidp;
 
 	if (argc != 4) {

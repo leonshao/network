@@ -5,8 +5,7 @@ LIB = -lpthread
 
 VPATH = ../socket \
 		../io \
-        ../handler \
-        ../cgi-bin
+        ../handler
 
 SOURCES = socketutil.c \
           ioutil.c \
@@ -20,7 +19,7 @@ OUTPUT = mytiny \
          tiny-multithread \
          tiny-prethreads
 
-all: $(OUTPUT) cgi
+all: $(OUTPUT)
 
 $(OBJECTS): %.o: %.c
 	$(CC) $(CFLAGS) -c $<
@@ -31,11 +30,5 @@ $(OBJECTS): %.o: %.c
 $(OUTPUT): $(OBJECTS)
 	$(CC) $(CFLAGS) -o $@ $@.c $^ $(LIB)
 
-cgi:
-	cd ../cgi-bin; make
-
-clean: cleancgi
+clean:
 	rm -f *.o mytiny client tiny-multiprocess tiny-select tiny-multithread tiny-prethreads test *~
-
-cleancgi:
-	cd ../cgi-bin; make clean
