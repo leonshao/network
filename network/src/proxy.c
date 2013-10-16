@@ -19,8 +19,11 @@ typedef struct {
 } hostinfo_t;
 
 hostinfo_t hostinfo[HOSTINFO_SIZE];
-int hostinfo_num;
-int hostinfo_index;
+
+typedef struct {
+	int connfd;
+	int index;
+} parm_t;
 
 char block_url_info[BLOCK_URL_SIZE][LINE_LEN];
 int block_url_num;
@@ -103,14 +106,13 @@ void print_hostinfo(hostinfo_t *hostinfo) {
 }
 
 void *thread_start(void *vargp) {
-	int connfd = *((int *)vargp);
+	parm_t *parm_p = (parm_t *)vargp;
+	int connfd = parm_p->connfd;
 	int clientfd, n;
 	char buf[8192];
 	char header[BUF_LEN];	// to get the req line
 	hostinfo_t *hostinfo_p;
 	int result;
-
-	free(vargp);
 
 	// 1. check HTTP req, redirect or block
 	result = verify_req(connfd, (char *)&header);
@@ -120,9 +122,8 @@ void *thread_start(void *vargp) {
 	}
 
 	// 2. redirect req to server and send back response
-	hostinfo_p = &hostinfo[hostinfo_index++];
-	if (hostinfo_index == hostinfo_num)
-		hostinfo_index = 0;
+	hostinfo_p = &hostinfo[parm_p->index];
+	free(vargp);
 
 	bzero((char *)&buf, 8192);
 	clientfd = open_clientfd(hostinfo_p->hostname, hostinfo_p->port);
@@ -149,12 +150,10 @@ int init_config() {
 		return 0;
 	}
 	config_file = fopen(filename, "r+");
-	// printf("orig pos: %ld\n", ftell(config_file));
 
 	while (fgets(line, LINE_LEN, config_file)) {
 		parse_config(line, &hostinfo[hostinfo_num++]);
 	}
-	hostinfo_index = 0;
 
 	return hostinfo_num;
 }
@@ -183,8 +182,10 @@ int init_block_urls() {
 }
 
 int main(int argc, char** argv) {
-	int listenfd, port, *connfdp, clientaddrlen;
+	int listenfd, port, clientaddrlen, connfd;
+	int hostinfo_num, hostinfo_index=0;
 	struct sockaddr_in clientaddr;
+	parm_t *parm_p;
 	pthread_t tid;
 
 	if (argc != 2) {
@@ -206,9 +207,17 @@ int main(int argc, char** argv) {
 	block_url_num = init_block_urls();
 
 	while (1) {
-		connfdp = malloc(sizeof(int));
-		*connfdp = accept(listenfd, (SA *)&clientaddr, (socklen_t *)&clientaddrlen);
-		pthread_create(&tid, NULL, thread_start, (void *)connfdp);
+		parm_p = malloc(sizeof(parm_t));
+		connfd = accept(listenfd, (SA *)&clientaddr, (socklen_t *)&clientaddrlen);
+		parm_p->connfd = connfd;
+
+		// chose host and pass the index to the thread
+		parm_p->index = hostinfo_index;
+		pthread_create(&tid, NULL, thread_start, (void *)parm_p);
+
+		hostinfo_index++;
+		if (hostinfo_index == hostinfo_num)
+			hostinfo_index = 0;
 	}
 	return 0;
 }
